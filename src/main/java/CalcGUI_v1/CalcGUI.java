@@ -147,7 +147,7 @@ public class CalcGUI implements ActionListener {
             int eventID = 48 + i;
             checkNumbers(keyNumbers[i], String.valueOf(i));
         }
-        checkEquals(keyDiv, "ENTER");
+        checkEquals(keyDiv);
     }
 
     private void checkFunction(JButton key, int event, String function){
@@ -178,12 +178,11 @@ public class CalcGUI implements ActionListener {
         });
     }
 
-    private void checkEquals(JButton key, String function){
-        mapKey = "VK_" + function;
+    private void checkEquals(JButton key){
+        mapKey = "VK_" + "ENTER";
         inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0, false), mapKey);
-        ActionMap ap = keyEqu.getActionMap();
-        ap.put(mapKey, new AbstractAction() {
+        key.getActionMap().put(mapKey, new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 actionEqual(e);
             }
