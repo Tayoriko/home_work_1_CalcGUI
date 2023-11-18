@@ -181,8 +181,9 @@ public class CalcGUI implements ActionListener {
     private void checkEquals(JButton key, String function){
         mapKey = "VK_" + function;
         inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        inputMap.put(KeyStroke.getKeyStroke("ENTER"), "wtf");
-        key.getActionMap().put("wtf", new AbstractAction() {
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0, false), mapKey);
+        ActionMap ap = keyEqu.getActionMap();
+        ap.put(mapKey, new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
                 actionEqual(e);
             }
