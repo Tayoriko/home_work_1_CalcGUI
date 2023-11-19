@@ -1,6 +1,7 @@
 package CalcGUI_v1;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -10,9 +11,14 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static javax.swing.KeyStroke.getKeyStroke;
+
 public class CalcGUI implements ActionListener {
+    private final String PREFIX_VK = "VK_";
+    private final String PREFIX_VK_NUMPAD = "VK_NUMPAD";
     JFrame frame;
-    JTextField textField;
+    JTextField fieldInput;
+    JTextArea fieldHistory;
     final JButton[] keyNumbers = new JButton[10];
     final JButton[] keyFunction = new JButton[9];
     JButton keyAdd, keySub, keyMul, keyDiv, keyInv;
@@ -25,13 +31,13 @@ public class CalcGUI implements ActionListener {
     char function;
     InputMap inputMap = new InputMap();
     String mapKey = "";
-    String value = "";
+    String history = "";
 
 
     private void frameCreate() {
         frame = new JFrame("Вау, кулькулятор?!");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(350, 450);
+        frame.setSize(500, 450);
         frame.setLayout(null);
     }
 
@@ -69,11 +75,6 @@ public class CalcGUI implements ActionListener {
             keyNumbers[i].setFocusable(false); //чтобы не работал выбор через TAB
         }
 
-        keyNumbers[0].setMnemonic(KeyEvent.VK_0);
-        String mapKey = "VK_0";
-        InputMap inputMap = keyNumbers[0].getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        inputMap.put(KeyStroke.getKeyStroke("0"), mapKey);
-
     }
 
     private void configPanel() {
@@ -105,10 +106,18 @@ public class CalcGUI implements ActionListener {
     }
 
     private void configKeys() {
-        textField = new JTextField();
-        textField.setBounds(25, 25, 275, 25);
-        textField.setFont(myFont);
-        textField.setEditable(false);
+        fieldInput = new JTextField();
+        fieldInput.setBounds(25, 25, 275, 25);
+        fieldInput.setFont(myFont);
+        fieldInput.setEditable(false);
+
+        fieldHistory = new JTextArea();
+        fieldHistory.setBounds(315, 25, 150, 350);
+        fieldHistory.setFont(myFont);
+        fieldHistory.setEditable(false);
+        fieldHistory.setText("Operations log:");
+
+        initKeys();
 
         keyDel.setBounds(25, 60, 75, 25);
         keyInv.setBounds(125, 60, 75, 25);
@@ -116,7 +125,8 @@ public class CalcGUI implements ActionListener {
     }
 
     private void frameComponents() {
-        frame.add(textField);
+        frame.add(fieldInput);
+        frame.add(fieldHistory);
         frame.add(keyDel);
         frame.add(keyInv);
         frame.add(keyClr);
@@ -125,7 +135,6 @@ public class CalcGUI implements ActionListener {
 
     private void configList() {
         frameCreate();
-        initKeys();
         configKeys();
         configPanel();
         frameComponents();
@@ -139,36 +148,23 @@ public class CalcGUI implements ActionListener {
 
     private void keyboardControl()
     {
-        checkFunction(keyAdd, KeyEvent.VK_EQUALS, "ADD");
-        checkFunction(keySub, KeyEvent.VK_SEMICOLON, "SUBTRACT");
-        checkFunction(keyMul, KeyEvent.VK_8, "MULTIPLY");
-        checkFunction(keyDiv, KeyEvent.VK_SLASH, "DIVIDE");
+        checkAction(keyAdd, KeyEvent.VK_EQUALS, "ADD", PREFIX_VK);
+        checkAction(keySub, KeyEvent.VK_SUBTRACT,"SUBTRACT", PREFIX_VK);
+        checkAction(keySub, KeyEvent.VK_MINUS,"MINUS", PREFIX_VK);
+        checkAction(keyMul, KeyEvent.VK_8,"MULTIPLY", PREFIX_VK);
+        checkAction(keyDiv, KeyEvent.VK_SLASH,"DIVIDE", PREFIX_VK);
         for (int i = 0; i < 10; i++) {
-            int eventID = 48 + i;
-            checkNumbers(keyNumbers[i], String.valueOf(i));
+            checkNumbers(keyNumbers[i], String.valueOf(i), PREFIX_VK);
+            checkNumbers(keyNumbers[i], String.valueOf(i), PREFIX_VK_NUMPAD);
         }
-        checkEquals(keyDiv);
+        checkAction(keyEqu, KeyEvent.VK_ENTER, "ENTER", PREFIX_VK);
+        checkAction(keyClr, KeyEvent.VK_ESCAPE, "ESCAPE", PREFIX_VK);
+        checkAction(keyDel, KeyEvent.VK_BACK_SPACE, "BACK_SPACE", PREFIX_VK);
+        checkAction(keyDec, KeyEvent.VK_DECIMAL, "DECIMAL", PREFIX_VK);
     }
 
-    private void checkFunction(JButton key, int event, String function){
-        mapKey = "VK_" + function;
-        inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        inputMap.put(KeyStroke.getKeyStroke(event, InputEvent.SHIFT_MASK), mapKey);
-        key.getActionMap().put(mapKey, new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                actionFunction(e);
-            }
-        });
-        inputMap.put(KeyStroke.getKeyStroke(function), mapKey);
-        key.getActionMap().put(mapKey, new AbstractAction() {
-            public void actionPerformed(ActionEvent e) {
-                actionFunction(e);
-            }
-        });
-    }
-
-    private void checkNumbers(JButton key, String function){
-        mapKey = "VK_" + function;
+    private void checkNumbers(JButton key, String function, String prefix){
+        mapKey = prefix + function;
         inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(function), mapKey);
         key.getActionMap().put(mapKey, new AbstractAction() {
@@ -178,15 +174,36 @@ public class CalcGUI implements ActionListener {
         });
     }
 
-    private void checkEquals(JButton key){
-        mapKey = "VK_" + "ENTER";
+    private void checkAction(JButton key, int event, String function, String prefix){
+        mapKey = prefix + function;
         inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0, false), mapKey);
+        if (event != KeyEvent.VK_SLASH) {
+            inputMap.put(getKeyStroke(event, InputEvent.SHIFT_MASK), mapKey);
+        }
+        else if (event == KeyEvent.VK_SLASH) {
+            inputMap.put(getKeyStroke(function), "VK_SLASH");
+        }
+        inputMap.put(getKeyStroke(function), mapKey);
         key.getActionMap().put(mapKey, new AbstractAction() {
             public void actionPerformed(ActionEvent e) {
-                actionEqual(e);
+                selectAction(function, e);
             }
         });
+    }
+
+    private void selectAction(String function, ActionEvent e){
+        if (function.equals("ADD") || function.equals("SUBTRACT") || function.equals("MINUS")
+                || function.equals("MULTIPLY") || function.equals("DIVIDE")){
+            actionFunction(e);
+            return;
+        }
+        if (function.equals("ENTER")){
+            actionEqual(e);
+            return;
+        }
+        if (function.equals("ESCAPE") || function.equals("BACK_SPACE") || function.equals("DECIMAL")){
+            actionOptions(e);
+        }
     }
 
     @Override
@@ -200,18 +217,18 @@ public class CalcGUI implements ActionListener {
     private void actionNumbers(ActionEvent e) {
         //add numbers
         for (int i = 1; i < 10; i++) {
-            if (textField.getText().equals("0")) {
-                textField.setText("");
+            if (fieldInput.getText().equals("0")) {
+                fieldInput.setText("");
             }
             if (e.getSource() == keyNumbers[i]) {
-                textField.setText(textField.getText().concat(String.valueOf(i)));
+                fieldInput.setText(fieldInput.getText().concat(String.valueOf(i)));
             }
         }
 
         //add zero
         if (e.getSource() == keyNumbers[0]) {
-            if (!textField.getText().equals("0")) {
-                textField.setText(textField.getText().concat(String.valueOf(0)));
+            if (!fieldInput.getText().equals("0")) {
+                fieldInput.setText(fieldInput.getText().concat(String.valueOf(0)));
             }
         }
 
@@ -219,47 +236,47 @@ public class CalcGUI implements ActionListener {
         if (e.getSource() == keyDec) {
             String regex = "\\.";
             Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(textField.getText());
+            Matcher matcher = pattern.matcher(fieldInput.getText());
             if (!matcher.find()) {
-                textField.setText(textField.getText().concat("."));
+                fieldInput.setText(fieldInput.getText().concat("."));
             }
         }
     }
 
     private void actionFunction(ActionEvent e) {
-        if (!Objects.equals(textField.getText(), "")) {
+        if (!Objects.equals(fieldInput.getText(), "")) {
             if (e.getSource() == keyAdd) {
-                valueOne = Double.parseDouble(textField.getText());
+                valueOne = Double.parseDouble(fieldInput.getText());
                 function = '+';
-                textField.setText("");
+                fieldInput.setText("");
                 return;
             }
             //functional keys - sub
             if (e.getSource() == keySub) {
-                valueOne = Double.parseDouble(textField.getText());
+                valueOne = Double.parseDouble(fieldInput.getText());
                 function = '-';
-                textField.setText("");
+                fieldInput.setText("");
                 return;
             }
             //functional keys - mul
             if (e.getSource() == keyMul) {
-                valueOne = Double.parseDouble(textField.getText());
+                valueOne = Double.parseDouble(fieldInput.getText());
                 function = '*';
-                textField.setText("");
+                fieldInput.setText("");
                 return;
             }
             //functional keys - div
             if (e.getSource() == keyDiv) {
-                valueOne = Double.parseDouble(textField.getText());
+                valueOne = Double.parseDouble(fieldInput.getText());
                 function = '/';
-                textField.setText("");
+                fieldInput.setText("");
             }
         }
     }
 
     private void actionEqual(ActionEvent e) {
-        if (e.getSource() == keyEqu) {
-            valueTwo = Double.parseDouble(textField.getText());
+        if (e.getSource() == keyEqu && valueOne != 0.0) {
+            valueTwo = Double.parseDouble(fieldInput.getText());
             switch (function) {
                 case '+':
                     result = valueOne + valueTwo;
@@ -274,25 +291,37 @@ public class CalcGUI implements ActionListener {
                     result = valueOne / valueTwo;
                     break;
             }
-            textField.setText(String.valueOf(result));
+            fieldInput.setText(String.valueOf(result));
+            history = fieldHistory.getText() + "\n"
+                    + valueOne + " " + function + " " + valueTwo + " = " + result;
+            fieldHistory.setText(history);
+            int linesCnt = fieldHistory.getLineCount();
+            int linesLimit = 15;
+            if (linesCnt > linesLimit){
+                try {
+                    fieldHistory.replaceRange("", fieldHistory.getLineStartOffset(1), fieldHistory.getLineStartOffset(2));
+                } catch (BadLocationException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
             valueOne = result;
         }
     }
 
     private void actionOptions(ActionEvent e) {
         if (e.getSource() == keyClr) {
-            textField.setText("");
+            fieldInput.setText("");
         }
         if (e.getSource() == keyDel) {
-            String text = String.valueOf(textField.getText());
-            textField.setText("");
+            String text = String.valueOf(fieldInput.getText());
+            fieldInput.setText("");
             for (int i = 0; i < text.length() - 1; i++) {
-                textField.setText(textField.getText() + text.charAt(i));
+                fieldInput.setText(fieldInput.getText() + text.charAt(i));
             }
         }
         if (e.getSource() == keyInv) {
-            double tmp = Double.parseDouble(textField.getText());
-            textField.setText(String.valueOf(-tmp));
+            double tmp = Double.parseDouble(fieldInput.getText());
+            fieldInput.setText(String.valueOf(-tmp));
         }
     }
 }
