@@ -7,6 +7,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,22 +18,22 @@ import static javax.swing.KeyStroke.getKeyStroke;
 public class CalcGUI implements ActionListener {
     private final String PREFIX_VK = "VK_";
     private final String PREFIX_VK_NUMPAD = "VK_NUMPAD";
-    JFrame frame;
-    JTextField fieldInput;
-    JTextArea fieldHistory;
+    private JFrame frame;
+    private JTextField fieldInput;
+    private JTextArea fieldHistory;
     final JButton[] keyNumbers = new JButton[10];
-    final JButton[] keyFunction = new JButton[9];
-    JButton keyAdd, keySub, keyMul, keyDiv, keyInv;
-    JButton keyDec, keyDel, keyEqu, keyClr;
-    JPanel panel;
-    Font myFont = new Font("Arial", Font.BOLD, 16);
+    final List<JButton> keyFunction = new ArrayList<>();
+    private JButton keyAdd, keySub, keyMul, keyDiv, keyInv;
+    private JButton keyDec, keyDel, keyEqu, keyClr;
+    private JPanel panel;
+    private Font myFont = new Font("Arial", Font.BOLD, 16);
     private double valueOne = 0;
     private double valueTwo = 0;
     private double result = 0;
     char function;
-    InputMap inputMap = new InputMap();
-    String mapKey = "";
-    String history = "";
+    private InputMap inputMap = new InputMap();
+    private String mapKey = "";
+    private String history = "";
 
 
     private void frameCreate() {
@@ -52,20 +54,20 @@ public class CalcGUI implements ActionListener {
         keyEqu = new JButton("=");
         keyInv = new JButton("INV");
 
-        keyFunction[0] = keyAdd;
-        keyFunction[1] = keySub;
-        keyFunction[2] = keyMul;
-        keyFunction[3] = keyDiv;
-        keyFunction[4] = keyDec;
-        keyFunction[5] = keyDel;
-        keyFunction[6] = keyClr;
-        keyFunction[7] = keyEqu;
-        keyFunction[8] = keyInv;
+        keyFunction.add(keyAdd);
+        keyFunction.add(keySub);
+        keyFunction.add(keyMul);
+        keyFunction.add(keyDiv);
+        keyFunction.add(keyDec);
+        keyFunction.add(keyDel);
+        keyFunction.add(keyClr);
+        keyFunction.add(keyEqu);
+        keyFunction.add(keyInv);
 
-        for (int i = 0; i < 9; i++) {
-            keyFunction[i].addActionListener(this);
-            keyFunction[i].setFont(myFont);
-            keyFunction[i].setFocusable(false); //чтобы не работал выбор через TAB
+        for (JButton i : keyFunction) {
+            i.addActionListener(this);
+            i.setFont(myFont);
+            i.setFocusable(false); //чтобы не работал выбор через TAB
         }
 
         for (int i = 0; i < 10; i++) {
@@ -146,13 +148,12 @@ public class CalcGUI implements ActionListener {
         keyboardControl();
     }
 
-    private void keyboardControl()
-    {
+    private void keyboardControl() {
         checkAction(keyAdd, KeyEvent.VK_EQUALS, "ADD", PREFIX_VK);
-        checkAction(keySub, KeyEvent.VK_SUBTRACT,"SUBTRACT", PREFIX_VK);
-        checkAction(keySub, KeyEvent.VK_MINUS,"MINUS", PREFIX_VK);
-        checkAction(keyMul, KeyEvent.VK_8,"MULTIPLY", PREFIX_VK);
-        checkAction(keyDiv, KeyEvent.VK_SLASH,"DIVIDE", PREFIX_VK);
+        checkAction(keySub, KeyEvent.VK_SUBTRACT, "SUBTRACT", PREFIX_VK);
+        checkAction(keySub, KeyEvent.VK_MINUS, "MINUS", PREFIX_VK);
+        checkAction(keyMul, KeyEvent.VK_8, "MULTIPLY", PREFIX_VK);
+        checkAction(keyDiv, KeyEvent.VK_SLASH, "DIVIDE", PREFIX_VK);
         for (int i = 0; i < 10; i++) {
             checkNumbers(keyNumbers[i], String.valueOf(i), PREFIX_VK);
             checkNumbers(keyNumbers[i], String.valueOf(i), PREFIX_VK_NUMPAD);
@@ -163,7 +164,7 @@ public class CalcGUI implements ActionListener {
         checkAction(keyDec, KeyEvent.VK_DECIMAL, "DECIMAL", PREFIX_VK);
     }
 
-    private void checkNumbers(JButton key, String function, String prefix){
+    private void checkNumbers(JButton key, String function, String prefix) {
         mapKey = prefix + function;
         inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(function), mapKey);
@@ -174,13 +175,12 @@ public class CalcGUI implements ActionListener {
         });
     }
 
-    private void checkAction(JButton key, int event, String function, String prefix){
+    private void checkAction(JButton key, int event, String function, String prefix) {
         mapKey = prefix + function;
         inputMap = key.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         if (event != KeyEvent.VK_SLASH) {
             inputMap.put(getKeyStroke(event, InputEvent.SHIFT_MASK), mapKey);
-        }
-        else if (event == KeyEvent.VK_SLASH) {
+        } else if (event == KeyEvent.VK_SLASH) {
             inputMap.put(getKeyStroke(function), "VK_SLASH");
         }
         inputMap.put(getKeyStroke(function), mapKey);
@@ -191,17 +191,17 @@ public class CalcGUI implements ActionListener {
         });
     }
 
-    private void selectAction(String function, ActionEvent e){
+    private void selectAction(String function, ActionEvent e) {
         if (function.equals("ADD") || function.equals("SUBTRACT") || function.equals("MINUS")
-                || function.equals("MULTIPLY") || function.equals("DIVIDE")){
+                || function.equals("MULTIPLY") || function.equals("DIVIDE")) {
             actionFunction(e);
             return;
         }
-        if (function.equals("ENTER")){
+        if (function.equals("ENTER")) {
             actionEqual(e);
             return;
         }
-        if (function.equals("ESCAPE") || function.equals("BACK_SPACE") || function.equals("DECIMAL")){
+        if (function.equals("ESCAPE") || function.equals("BACK_SPACE") || function.equals("DECIMAL")) {
             actionOptions(e);
         }
     }
@@ -297,7 +297,7 @@ public class CalcGUI implements ActionListener {
             fieldHistory.setText(history);
             int linesCnt = fieldHistory.getLineCount();
             int linesLimit = 15;
-            if (linesCnt > linesLimit){
+            if (linesCnt > linesLimit) {
                 try {
                     fieldHistory.replaceRange("", fieldHistory.getLineStartOffset(1), fieldHistory.getLineStartOffset(2));
                 } catch (BadLocationException ex) {
